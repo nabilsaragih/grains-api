@@ -18,17 +18,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from operator import itemgetter
 
-# ============================================================
-#  LOAD .env
-# ============================================================
-
 load_dotenv()
 
-
-# ============================================================
 #  ENVIRONMENT VARIABLES
-# ============================================================
-
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise RuntimeError("Missing GOOGLE_API_KEY in environment")
@@ -43,10 +35,7 @@ if not all([TIDB_USER, TIDB_PASSWORD, TIDB_HOST]):
     raise RuntimeError("TiDB environment variables missing (TIDB_USER / TIDB_PASSWORD / TIDB_HOST)")
 
 
-# ============================================================
 #  BUILD TiDB CONNECTION STRING
-# ============================================================
-
 _pw = quote_plus(TIDB_PASSWORD)
 _ca = quote_plus(certifi.where())
 
@@ -59,10 +48,7 @@ DB_NAME = urlparse(TIDB_CONN).path.lstrip("/") or "?"
 print(f"[INFO] TiDB_CONN OK. Connected DB = {DB_NAME}")
 
 
-# ============================================================
 #  TEST KONEKSI TiDB
-# ============================================================
-
 engine = create_engine(TIDB_CONN, pool_pre_ping=True)
 try:
     with engine.connect() as conn:
@@ -71,10 +57,7 @@ except Exception as e:
     raise RuntimeError(f"❌ Failed to connect to TiDB: {e}")
 
 
-# ============================================================
 #  RAG COMPONENTS (LangChain + Gemma + TiDBVectorStore)
-# ============================================================
-
 emb = GoogleGenerativeAIEmbeddings(
     model="models/text-embedding-004",
     google_api_key=GOOGLE_API_KEY,
@@ -98,7 +81,6 @@ llm = ChatGoogleGenerativeAI(
     max_output_tokens=800,
     google_api_key=GOOGLE_API_KEY,
 )
-
 
 def fmt(x, unit: str = "", nd: int = 2):
     """Format angka nutrisi untuk konteks LLM."""
@@ -130,24 +112,18 @@ def format_docs(docs):
     return "\n".join(out)
 
 
-# ============================================================
 #  Pydantic MODELS
-# ============================================================
-
 class Portion(BaseModel):
     size: Optional[float] = None
     unit: str
-
 
 class Product(BaseModel):
     name: Optional[str] = None
     portion: Portion
 
-
 class NutritionFact(BaseModel):
     label: str
     value: str
-
 
 class UserProfile(BaseModel):
     id: Optional[str] = None
@@ -159,26 +135,21 @@ class UserProfile(BaseModel):
     birth_date: Optional[str] = None
     medical_history: Optional[str] = None
 
-
 class ManualSearchRequest(BaseModel):
     query: str
     product: Product
     nutritionFacts: List[NutritionFact]
     userProfile: Optional[UserProfile] = None
 
-
 class ManualSearchResponse(BaseModel):
     status: str
-    answer: dict        # <- hasil JSON dari Gemma, sudah diparse
+    answer: dict
     used_query: str
     user_profile: str
     product_profile: str
 
 
-# ============================================================
 #  BUILD PROFILE TEXTS UNTUK PROMPT
-# ============================================================
-
 def build_user_profile_text(user: Optional[UserProfile]) -> str:
     if not user:
         return "Tidak ada data profil pengguna. Gunakan asumsi umum dan rekomendasi aman."
@@ -229,10 +200,6 @@ def build_search_query(query: str, product_name: Optional[str], facts: List[Nutr
     return " ; ".join(parts) if parts else "produk makanan kemasan alternatif yang lebih sehat"
 
 
-# ============================================================
-#  PROMPT: PAKSA GEMMA OUTPUT JSON VALID (ESCAPED BRACES)
-# ============================================================
-
 PROMPT = ChatPromptTemplate.from_messages([
     (
         "human",
@@ -246,29 +213,29 @@ JANGAN GUNAKAN BLOK MARKDOWN SEPERTI ```json ATAU ```.
 Berikut struktur JSON WAJIB:
 
 {{
-  "recommendations": [
+    "recommendations": [
     {{
-      "rank": <number>,
-      "brand": "<brand name>",
-      "category": "<category>",
-      "reasons": ["<alasan1>", "<alasan2>", "..."],
-      "nutrition": {{
-        "sugar_g_100g": <number or null>,
-        "sodium_mg_100g": <number or null>,
-        "protein_g_100g": <number or null>,
-        "fiber_g_100g": <number or null>,
-        "fat_sat_g_100g": <number or null>
-      }}
+        "rank": <number>,
+        "brand": "<brand name>",
+        "category": "<category>",
+        "reasons": ["<alasan1>", "<alasan2>", "..."],
+        "nutrition": {{
+            "sugar_g_100g": <number or null>,
+            "sodium_mg_100g": <number or null>,
+            "protein_g_100g": <number or null>,
+            "fiber_g_100g": <number or null>,
+            "fat_sat_g_100g": <number or null>
+        }}
     }}
-  ],
-  "summary": "<ringkasan singkat>"
+    ],
+    "summary": "<ringkasan singkat>"
 }}
 
 Jika tidak ada produk yang cocok, kembalikan:
 
 {{
-  "recommendations": [],
-  "summary": "Tidak ditemukan alternatif yang cocok."
+    "recommendations": [],
+    "summary": "Tidak ditemukan alternatif yang cocok."
 }}
 
 ======================================================
@@ -301,24 +268,14 @@ rag_chain = (
 )
 
 
-# ============================================================
-#  HELPER: BERSIHKAN ```json ... ```
-# ============================================================
-
+#  HELPER
 def extract_json_from_llm(raw: str) -> str:
-    """
-    Bersihkan output LLM dari blok kode markdown (```json ... ``` atau ``` ... ```),
-    lalu kembalikan hanya string JSON polos.
-    """
     s = raw.strip()
 
-    # Jika mulai dengan ``` (dengan atau tanpa 'json')
     if s.startswith("```"):
-        # buang baris pertama (```json atau ```)
         first_newline = s.find("\n")
         if first_newline != -1:
             s = s[first_newline + 1 :]
-        # buang ``` di akhir kalau ada
         if s.endswith("```"):
             s = s[:-3]
         s = s.strip()
@@ -326,10 +283,7 @@ def extract_json_from_llm(raw: str) -> str:
     return s
 
 
-# ============================================================
 #  FASTAPI APP
-# ============================================================
-
 app = FastAPI(title="RAG API with User Profile")
 
 @app.get("/")
@@ -366,7 +320,7 @@ def manual_search(payload: ManualSearchRequest):
     )
 
     try:
-        # Invoke RAG chain -> string (kadang ```json … ```)
+        # Invoke RAG chain
         raw_answer = rag_chain.invoke({
             "search_query": search_query,
             "user_query": q or f"Alternatif lebih sehat untuk {payload.product.name or 'produk ini'}",
@@ -379,7 +333,6 @@ def manual_search(payload: ManualSearchRequest):
         try:
             answer_json = json.loads(cleaned)
         except json.JSONDecodeError as e:
-            # Debug sedikit: kirim potongan raw untuk di-log / diperiksa
             snippet = cleaned[:200]
             raise HTTPException(
                 status_code=500,
