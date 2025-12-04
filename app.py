@@ -332,6 +332,10 @@ def extract_json_from_llm(raw: str) -> str:
 
 app = FastAPI(title="RAG API with User Profile")
 
+@app.get("/")
+def root():
+    return {"message": "hello from grains-api"}
+
 @app.post("/req")
 def request_echo(data: dict):
     print("Received data:", data)
