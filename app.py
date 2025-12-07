@@ -203,14 +203,14 @@ def build_search_query(query: str, product_name: Optional[str], facts: List[Nutr
 PROMPT = ChatPromptTemplate.from_messages([
     (
         "human",
-        """Anda adalah asisten RAG gizi.
+        """You are a nutrition RAG assistant.
 
-SELALU KEMBALIKAN OUTPUT DALAM FORMAT JSON VALID.
-JANGAN BERI PENJELASAN DI LUAR JSON.
-JANGAN ADA TEKS SEBELUM ATAU SESUDAH JSON.
-JANGAN GUNAKAN BLOK MARKDOWN SEPERTI ```json ATAU ```.
+ALWAYS RETURN OUTPUT IN VALID JSON FORMAT.
+DO NOT PROVIDE ANY EXPLANATION OUTSIDE THE JSON.
+DO NOT ADD ANY TEXT BEFORE OR AFTER THE JSON.
+DO NOT USE MARKDOWN BLOCKS SUCH AS ```json OR ```.
 
-Berikut struktur JSON WAJIB:
+Here is the REQUIRED JSON structure:
 
 {{
     "recommendations": [
@@ -218,7 +218,7 @@ Berikut struktur JSON WAJIB:
         "rank": <number>,
         "brand": "<brand name>",
         "category": "<category>",
-        "reasons": ["<alasan1>", "<alasan2>", "..."],
+        "reasons": ["<reason1>", "<reason2>", "..."],
         "nutrition": {{
             "sugar_g_100g": <number or null>,
             "sodium_mg_100g": <number or null>,
@@ -228,30 +228,30 @@ Berikut struktur JSON WAJIB:
         }}
     }}
     ],
-    "summary": "<ringkasan singkat>"
+    "summary": "<short summary>"
 }}
 
-Jika tidak ada produk yang cocok, kembalikan:
+If no products are suitable, return:
 
 {{
     "recommendations": [],
-    "summary": "Tidak ditemukan alternatif yang cocok."
+    "summary": "No suitable alternative found."
 }}
 
 ======================================================
-Profil Pengguna:
+User Profile:
 {user_profile}
 
-Data Produk:
+Product Data:
 {product_profile}
 
-Preferensi:
+Preferences:
 {user_query}
 
-Konteks produk kandidat:
+Candidate Product Context:
 {context}
 
-Sekarang berikan hasil dalam format JSON VALID sesuai template di atas."""
+Now respond with the result in VALID JSON format following the template above."""
     )
 ])
 
@@ -323,7 +323,7 @@ def manual_search(payload: ManualSearchRequest):
         # Invoke RAG chain
         raw_answer = rag_chain.invoke({
             "search_query": search_query,
-            "user_query": q or f"Alternatif lebih sehat untuk {payload.product.name or 'produk ini'}",
+            "user_query": q or f"Healthier alternatives for {payload.product.name or 'this product'}",
             "user_profile": user_profile_text,
             "product_profile": product_profile_text,
         })
