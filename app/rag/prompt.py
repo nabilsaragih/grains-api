@@ -13,31 +13,31 @@ DO NOT USE MARKDOWN BLOCKS SUCH AS ```json OR ```.
 
 Here is the REQUIRED JSON structure:
 
-{
+{{
     "recommendations": [
-    {
+    {{
         "rank": <number>,
         "brand": "<brand name>",
         "category": "<category>",
         "reasons": ["<reason1>", "<reason2>", "..."],
-        "nutrition": {
+        "nutrition": {{
             "sugar_g_100g": <number or null>,
             "sodium_mg_100g": <number or null>,
             "protein_g_100g": <number or null>,
             "fiber_g_100g": <number or null>,
             "fat_sat_g_100g": <number or null>
-        }
-    }
+        }}
+    }}
     ],
     "summary": "<short summary>"
-}
+}}
 
 If no products are suitable, return:
 
-{
+{{
     "recommendations": [],
     "summary": "No suitable alternative found."
-}
+}}
 
 ======================================================
 User Profile:
@@ -52,7 +52,7 @@ Preferences:
 Candidate Product Context:
 {context}
 
-Now respond with the result in VALID JSON format following the template above.""",
+Now respond with the result in VALID JSON format following the template above."""
         )
     ]
 )
