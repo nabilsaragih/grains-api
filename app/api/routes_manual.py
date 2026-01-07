@@ -14,7 +14,7 @@ from app.services.parsing import extract_json_from_llm
 router = APIRouter()
 
 
-@router.post("/manual-search", response_model=ManualSearchResponse)
+@router.post("/search/manual", response_model=ManualSearchResponse)
 def manual_search(payload: ManualSearchRequest):
     q = payload.query.strip()
     if not q and not payload.product.name:
