@@ -4,22 +4,27 @@ PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "human",
-            """You are a nutrition RAG assistant.
+            """Anda adalah asisten RAG nutrisi.
 
-ALWAYS RETURN OUTPUT IN VALID JSON FORMAT.
-DO NOT PROVIDE ANY EXPLANATION OUTSIDE THE JSON.
-DO NOT ADD ANY TEXT BEFORE OR AFTER THE JSON.
-DO NOT USE MARKDOWN BLOCKS SUCH AS ```json OR ```.
+SELALU KEMBALIKAN OUTPUT DALAM FORMAT JSON YANG VALID.
+JANGAN BERIKAN PENJELASAN DI LUAR JSON.
+JANGAN TAMBAHKAN TEKS APA PUN SEBELUM ATAU SESUDAH JSON.
+JANGAN GUNAKAN BLOK MARKDOWN SEPERTI ```json ATAU ```.
 
-Here is the REQUIRED JSON structure:
+Berikut adalah struktur JSON yang WAJIB:
 
 {{
+    "product_assessment": {{
+        "is_safe": <true|false|null>,
+        "reasons": ["<alasan1>", "<alasan2>", "..."],
+        "summary": "<kalimat singkat>"
+    }},
     "recommendations": [
     {{
         "rank": <number>,
-        "brand": "<brand name>",
-        "category": "<category>",
-        "reasons": ["<reason1>", "<reason2>", "..."],
+        "brand": "<nama merek>",
+        "category": "<kategori>",
+        "reasons": ["<alasan1>", "<alasan2>", "..."],
         "nutrition": {{
             "sugar_g_100g": <number or null>,
             "sodium_mg_100g": <number or null>,
@@ -29,30 +34,42 @@ Here is the REQUIRED JSON structure:
         }}
     }}
     ],
-    "summary": "<short summary>"
+    "summary": "<ringkasan singkat>"
 }}
 
-If no products are suitable, return:
+Aturan:
+- Selalu nilai produk asli terhadap riwayat medis pengguna dan fakta nutrisi.
+- Jika data tidak cukup untuk menilai, set "is_safe" ke null dan jelaskan di "reasons".
+- Meskipun produk asli aman, tetap berikan rekomendasi jika ada opsi yang lebih baik (lebih rendah gula/natrium/lemak jenuh, lebih tinggi serat/protein, dll).
+- Semua nilai teks harus menggunakan Bahasa Indonesia.
+- Pastikan rekomendasi memiliki jenis yang sama dengan produk asal (contoh: jika produk adalah teh/minuman, rekomendasi juga harus minuman).
+
+Jika tidak ada produk yang cocok, kembalikan:
 
 {{
+    "product_assessment": {{
+        "is_safe": <true|false|null>,
+        "reasons": ["<alasan1>", "<alasan2>", "..."],
+        "summary": "<kalimat singkat>"
+    }},
     "recommendations": [],
-    "summary": "No suitable alternative found."
+    "summary": "Tidak ada alternatif yang sesuai."
 }}
 
 ======================================================
-User Profile:
+Profil Pengguna:
 {user_profile}
 
-Product Data:
+Data Produk:
 {product_profile}
 
-Preferences:
+Preferensi:
 {user_query}
 
-Candidate Product Context:
+Konteks Produk Kandidat:
 {context}
 
-Now respond with the result in VALID JSON format following the template above."""
+Sekarang jawab dengan hasil dalam format JSON YANG VALID mengikuti template di atas."""
         )
     ]
 )

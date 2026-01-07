@@ -20,7 +20,7 @@ def manual_search(payload: ManualSearchRequest):
     if not q and not payload.product.name:
         raise HTTPException(
             status_code=400,
-            detail="Field 'query' or product.name must be provided.",
+            detail="Field 'query' atau product.name harus diisi.",
         )
 
     user_profile_text = build_user_profile_text(payload.userProfile)
@@ -38,7 +38,7 @@ def manual_search(payload: ManualSearchRequest):
             {
                 "search_query": search_query,
                 "user_query": q
-                or f"Healthier alternatives for {payload.product.name or 'this product'}",
+                or f"Alternatif yang lebih sehat untuk {payload.product.name or 'produk ini'}",
                 "user_profile": user_profile_text,
                 "product_profile": product_profile_text,
             }
@@ -52,7 +52,10 @@ def manual_search(payload: ManualSearchRequest):
             snippet = cleaned[:200]
             raise HTTPException(
                 status_code=500,
-                detail=f"Model did not return valid JSON: {exc}. Cleaned snippet: {snippet}",
+                detail=(
+                    "Model tidak mengembalikan JSON yang valid: "
+                    f"{exc}. Cuplikan hasil: {snippet}"
+                ),
             )
 
         return ManualSearchResponse(
@@ -66,4 +69,6 @@ def manual_search(payload: ManualSearchRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"RAG error: {exc}")
+        raise HTTPException(
+            status_code=500, detail=f"Kesalahan RAG: {exc}"
+        )
