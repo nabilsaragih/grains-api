@@ -42,3 +42,19 @@ class ManualSearchResponse(BaseModel):
     used_query: str
     user_profile: str
     product_profile: str
+
+
+class OcrSearchRequest(BaseModel):
+    image_base64: Optional[str] = None
+    image_path: Optional[str] = None
+    image_mime: Optional[str] = "image/jpeg"
+    userProfile: Optional[UserProfile] = None
+
+
+class OcrSearchResponse(BaseModel):
+    status: str
+    answer: dict
+    ocr_markdown: str
+    used_query: str
+    user_profile: str
+    product_profile: str

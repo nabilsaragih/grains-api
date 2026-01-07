@@ -18,6 +18,7 @@ def _require_env(var: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     google_api_key: str
+    mistral_api_key: str
     tidb_user: str
     tidb_password: str
     tidb_host: str
@@ -43,6 +44,7 @@ class Settings:
 def load_settings() -> Settings:
     return Settings(
         google_api_key=_require_env("GOOGLE_API_KEY"),
+        mistral_api_key=_require_env("MISTRAL_API_KEY"),
         tidb_user=_require_env("TIDB_USER"),
         tidb_password=_require_env("TIDB_PASSWORD"),
         tidb_host=_require_env("TIDB_HOST"),
