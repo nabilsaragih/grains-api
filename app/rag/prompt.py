@@ -42,6 +42,7 @@ Aturan:
 - Jika data tidak cukup untuk menilai, set "is_safe" ke null dan jelaskan di "reasons".
 - Meskipun produk asli aman, tetap berikan rekomendasi jika ada opsi yang lebih baik (lebih rendah gula/natrium/lemak jenuh, lebih tinggi serat/protein, dll).
 - Semua nilai teks harus menggunakan Bahasa Indonesia.
+- Selalu pastikan rekomendasi tidak duplikat.
 - Pastikan rekomendasi memiliki jenis yang sama dengan produk asal (contoh: jika produk adalah teh/minuman, rekomendasi juga harus minuman).
 
 Jika tidak ada produk yang cocok, kembalikan:
