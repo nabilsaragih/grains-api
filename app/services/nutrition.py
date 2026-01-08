@@ -29,6 +29,15 @@ def build_user_profile_text(user: Optional[UserProfile]) -> str:
     return "\n".join(lines)
 
 
+def build_user_query(medical_history: Optional[str]) -> str:
+    if medical_history:
+        return (
+            "Rekomendasi alternatif lebih sehat berdasarkan riwayat medis: "
+            f"{medical_history}"
+        )
+    return "Berikan alternatif lebih sehat dan aman berdasarkan profil pengguna."
+
+
 def build_product_profile(product: Product, facts: List[NutritionFact]) -> str:
     lines = []
     if product.name:
@@ -51,7 +60,11 @@ def build_product_profile(product: Product, facts: List[NutritionFact]) -> str:
     return "\n".join(lines)
 
 
-def build_search_query(query: str, product_name: Optional[str], facts: List[NutritionFact]) -> str:
+def build_search_query(
+    query: Optional[str],
+    product_name: Optional[str],
+    facts: List[NutritionFact],
+) -> str:
     parts = []
     if query:
         parts.append(query)

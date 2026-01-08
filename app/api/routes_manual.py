@@ -7,6 +7,7 @@ from app.rag.pipeline import rag_chain
 from app.services.nutrition import (
     build_product_profile,
     build_search_query,
+    build_user_query,
     build_user_profile_text,
 )
 from app.services.parsing import extract_json_from_llm
@@ -16,14 +17,24 @@ router = APIRouter()
 
 @router.post("/search/manual", response_model=ManualSearchResponse)
 def manual_search(payload: ManualSearchRequest):
-    q = payload.query.strip()
-    if not q and not payload.product.name:
+    q = (payload.query or "").strip()
+    if not q and not payload.product.name and not payload.nutritionFacts:
         raise HTTPException(
             status_code=400,
-            detail="Field 'query' atau product.name harus diisi.",
+            detail=(
+                "Field 'query', product.name, atau nutritionFacts harus diisi."
+            ),
         )
 
     user_profile_text = build_user_profile_text(payload.userProfile)
+    medical_history = (
+        payload.userProfile.medical_history
+        if payload.userProfile
+        else None
+    )
+    user_query = build_user_query(medical_history)
+    if q:
+        user_query = f"{user_query} Preferensi tambahan: {q}"
     product_profile_text = build_product_profile(
         payload.product, payload.nutritionFacts
     )
@@ -37,8 +48,7 @@ def manual_search(payload: ManualSearchRequest):
         raw_answer = rag_chain.invoke(
             {
                 "search_query": search_query,
-                "user_query": q
-                or f"Alternatif yang lebih sehat untuk {payload.product.name or 'produk ini'}",
+                "user_query": user_query,
                 "user_profile": user_profile_text,
                 "product_profile": product_profile_text,
             }

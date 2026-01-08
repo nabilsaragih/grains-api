@@ -9,7 +9,7 @@ from mistralai import Mistral
 from app.core.config import settings
 from app.models.schemas import OcrSearchResponse, UserProfile
 from app.rag.pipeline import rag_chain
-from app.services.nutrition import build_user_profile_text
+from app.services.nutrition import build_user_profile_text, build_user_query
 from app.services.parsing import extract_json_from_llm
 
 router = APIRouter()
@@ -46,17 +46,6 @@ def _build_search_query(markdown: str) -> str:
         if snippet:
             return snippet[:500]
     return "alternatif makanan kemasan yang lebih sehat"
-
-
-def _build_user_query(medical_history: Optional[str]) -> str:
-    if medical_history:
-        return (
-            "Rekomendasi alternatif lebih sehat berdasarkan riwayat medis: "
-            f"{medical_history}"
-        )
-    return (
-        "Berikan alternatif lebih sehat dan aman berdasarkan profil pengguna."
-    )
 
 
 @router.post("/search/ocr", response_model=OcrSearchResponse)
@@ -113,7 +102,7 @@ def ocr_search(
     user_profile_text = build_user_profile_text(parsed_user)
     product_profile_text = f"Hasil OCR:\n{markdown}"
     search_query = _build_search_query(markdown)
-    user_query = _build_user_query(
+    user_query = build_user_query(
         parsed_user.medical_history
         if parsed_user
         else None

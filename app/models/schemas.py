@@ -30,7 +30,7 @@ class UserProfile(BaseModel):
 
 
 class ManualSearchRequest(BaseModel):
-    query: str
+    query: Optional[str] = None
     product: Product
     nutritionFacts: List[NutritionFact]
     userProfile: Optional[UserProfile] = None
