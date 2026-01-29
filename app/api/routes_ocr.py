@@ -40,7 +40,7 @@ def _encode_image_from_upload(upload: UploadFile) -> tuple[str, str]:
     return encoded, mime
 
 
-def _build_search_query(markdown: str) -> str:
+def build_search_query(markdown: str) -> str:
     if markdown:
         snippet = " ".join(markdown.strip().splitlines()[:6])
         if snippet:
@@ -101,7 +101,7 @@ def ocr_search(
 
     user_profile_text = build_user_profile_text(parsed_user)
     product_profile_text = f"Hasil OCR:\n{markdown}"
-    search_query = _build_search_query(markdown)
+    search_query = build_search_query(markdown)
     user_query = build_user_query(
         parsed_user.medical_history
         if parsed_user
