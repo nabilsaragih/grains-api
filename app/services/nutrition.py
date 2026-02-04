@@ -3,30 +3,25 @@ from typing import List, Optional
 from app.models.schemas import NutritionFact, Product, UserProfile
 
 
+def get_attribute(obj, key: str):
+    if obj is None:
+        return None
+    if isinstance(obj, dict):
+        return obj.get(key)
+    return getattr(obj, key, None)
+
+
 def build_user_profile_text(user: Optional[UserProfile]) -> str:
     if not user:
         return (
             "Tidak ada data profil pengguna. Gunakan asumsi umum dan berikan rekomendasi yang aman."
         )
 
-    lines = []
-    if user.full_name:
-        lines.append(f"Nama: {user.full_name}")
-    if user.gender:
-        lines.append(f"Jenis kelamin: {user.gender}")
-    if user.height:
-        lines.append(f"Tinggi: {user.height} cm")
-    if user.weight:
-        lines.append(f"Berat: {user.weight} kg")
-    if user.birth_date:
-        lines.append(f"Tanggal lahir: {user.birth_date}")
-    if user.medical_history:
-        lines.append(f"Riwayat medis: {user.medical_history}")
+    medical_history = get_attribute(user, "medical_history")
+    if medical_history:
+        return f"Riwayat medis: {medical_history}"
 
-    if not lines:
-        return "Profil pengguna minim. Berikan rekomendasi umum yang aman."
-
-    return "\n".join(lines)
+    return "Profil pengguna minim. Berikan rekomendasi umum yang aman."
 
 
 def build_user_query(medical_history: Optional[str]) -> str:
@@ -40,35 +35,53 @@ def build_user_query(medical_history: Optional[str]) -> str:
 
 def build_product_profile(product: Product, facts: List[NutritionFact]) -> str:
     lines = []
-    if product.name:
-        lines.append(f"Produk: {product.name}")
+    product_name = get_attribute(product, "name")
+    if product_name:
+        lines.append(f"Produk: {product_name}")
 
-    if product.portion.size:
+    portion = get_attribute(product, "portion")
+    portion_size = get_attribute(portion, "size")
+    portion_unit = get_attribute(portion, "unit")
+    if portion_unit and portion_size is not None:
         lines.append(
-            f"Ukuran porsi: {product.portion.size} {product.portion.unit}"
+            f"Ukuran porsi: {portion_size} {portion_unit}"
+        )
+    elif portion_unit:
+        lines.append(
+            f"Ukuran porsi: {portion_unit} (jumlah tidak tersedia)"
         )
     else:
-        lines.append(
-            f"Ukuran porsi: {product.portion.unit} (jumlah tidak tersedia)"
-        )
+        lines.append("Ukuran porsi: tidak tersedia")
 
     if facts:
         lines.append("Nutrisi per porsi:")
         for nf in facts:
-            lines.append(f"- {nf.label}: {nf.value}")
+            label = get_attribute(nf, "label")
+            value = get_attribute(nf, "value")
+            if not label and not value:
+                continue
+            if label and value is not None and value != "":
+                lines.append(f"- {label}: {value}")
+            elif label:
+                lines.append(f"- {label}")
+            else:
+                lines.append(f"- {value}")
 
     return "\n".join(lines)
 
 
 def build_search_query(
-    query: Optional[str],
     product_name: Optional[str],
     facts: List[NutritionFact],
 ) -> str:
     parts = []
-    if query:
-        parts.append(query)
     if product_name:
         parts.append(product_name)
-    parts += [f.label for f in facts if f.label]
+    for nf in facts or []:
+        label = get_attribute(nf, "label")
+        value = get_attribute(nf, "value")
+        if label and value:
+            parts.append(f"{label} {value}")
+        elif label:
+            parts.append(label)
     return " ; ".join(parts) if parts else "alternatif makanan kemasan yang lebih sehat"

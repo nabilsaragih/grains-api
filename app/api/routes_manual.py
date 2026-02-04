@@ -1,6 +1,5 @@
-import json
-
 from fastapi import APIRouter, HTTPException
+from pydantic import ValidationError
 
 from app.models.schemas import ManualSearchRequest, ManualSearchResponse
 from app.rag.pipeline import rag_chain
@@ -10,19 +9,17 @@ from app.services.nutrition import (
     build_user_query,
     build_user_profile_text,
 )
-from app.services.parsing import extract_json_from_llm
 
 router = APIRouter()
 
 
 @router.post("/search/manual", response_model=ManualSearchResponse)
 def manual_search(payload: ManualSearchRequest):
-    q = (payload.query or "").strip()
-    if not q and not payload.product.name and not payload.nutritionFacts:
+    if not payload.product.name and not payload.nutritionFacts:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Field 'query', product.name, atau nutritionFacts harus diisi."
+                "Field product.name atau nutritionFacts harus diisi."
             ),
         )
 
@@ -33,19 +30,16 @@ def manual_search(payload: ManualSearchRequest):
         else None
     )
     user_query = build_user_query(medical_history)
-    if q:
-        user_query = f"{user_query} Preferensi tambahan: {q}"
     product_profile_text = build_product_profile(
         payload.product, payload.nutritionFacts
     )
     search_query = build_search_query(
-        q,
         payload.product.name,
         payload.nutritionFacts,
     )
 
     try:
-        raw_answer = rag_chain.invoke(
+        answer = rag_chain.invoke(
             {
                 "search_query": search_query,
                 "user_query": user_query,
@@ -54,28 +48,19 @@ def manual_search(payload: ManualSearchRequest):
             }
         )
 
-        cleaned = extract_json_from_llm(raw_answer)
-
-        try:
-            answer_json = json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            snippet = cleaned[:200]
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    "Model tidak mengembalikan JSON yang valid: "
-                    f"{exc}. Cuplikan hasil: {snippet}"
-                ),
-            )
-
         return ManualSearchResponse(
             status="ok",
-            answer=answer_json,
+            answer=answer,
             used_query=search_query,
             user_profile=user_profile_text,
             product_profile=product_profile_text,
         )
 
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Output model tidak sesuai skema: {exc}",
+        )
     except HTTPException:
         raise
     except Exception as exc:

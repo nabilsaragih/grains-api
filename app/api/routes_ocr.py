@@ -5,12 +5,12 @@ from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from mistralai import Mistral
+from pydantic import ValidationError
 
 from app.core.config import settings
 from app.models.schemas import OcrSearchResponse, UserProfile
 from app.rag.pipeline import rag_chain
 from app.services.nutrition import build_user_profile_text, build_user_query
-from app.services.parsing import extract_json_from_llm
 
 router = APIRouter()
 
@@ -109,7 +109,7 @@ def ocr_search(
     )
 
     try:
-        raw_answer = rag_chain.invoke(
+        answer = rag_chain.invoke(
             {
                 "search_query": search_query,
                 "user_query": user_query,
@@ -118,29 +118,20 @@ def ocr_search(
             }
         )
 
-        cleaned = extract_json_from_llm(raw_answer)
-
-        try:
-            answer_json = json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            snippet = cleaned[:200]
-            raise HTTPException(
-                status_code=500,
-                detail=(
-                    "Model tidak mengembalikan JSON yang valid: "
-                    f"{exc}. Cuplikan hasil: {snippet}"
-                ),
-            )
-
         return OcrSearchResponse(
             status="ok",
-            answer=answer_json,
+            answer=answer,
             ocr_markdown=markdown,
             used_query=search_query,
             user_profile=user_profile_text,
             product_profile=product_profile_text,
         )
 
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Output model tidak sesuai skema: {exc}",
+        )
     except HTTPException:
         raise
     except Exception as exc:

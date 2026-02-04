@@ -1,14 +1,11 @@
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain_community.vectorstores import TiDBVectorStore
-from langchain_google_genai import (
-    ChatGoogleGenerativeAI,
-    GoogleGenerativeAIEmbeddings,
-)
 
 from app.core.config import settings
 
-embeddings = GoogleGenerativeAIEmbeddings(
-    model="models/text-embedding-004",
-    google_api_key=settings.google_api_key,
+embeddings = OllamaEmbeddings(
+    model=settings.ollama_embedding_model,
+    base_url=settings.ollama_base_url,
 )
 
 vector_store = TiDBVectorStore.from_existing_vector_table(
@@ -20,12 +17,11 @@ vector_store = TiDBVectorStore.from_existing_vector_table(
 
 retriever = vector_store.as_retriever(
     search_type="similarity",
-    search_kwargs={"k": 6},
+    search_kwargs={"k": 3},
 )
 
-llm = ChatGoogleGenerativeAI(
-    model=settings.gemma_model,
-    temperature=0.2,
-    max_output_tokens=800,
-    google_api_key=settings.google_api_key,
+llm = ChatOllama(
+    model=settings.ollama_chat_model,
+    base_url=settings.ollama_base_url,
+    temperature=0,
 )
