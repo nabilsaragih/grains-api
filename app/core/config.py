@@ -15,6 +15,20 @@ def _require_env(var: str) -> str:
     return value
 
 
+def _get_env_float(var: str, default: float) -> float:
+    value = os.getenv(var)
+    if value is None or value == "":
+        return default
+    return float(value)
+
+
+def _get_env_bool(var: str, default: bool) -> bool:
+    value = os.getenv(var)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     mistral_api_key: str
@@ -27,6 +41,8 @@ class Settings:
     ollama_base_url: str
     ollama_embedding_model: str
     ollama_chat_model: str
+    rag_timeout_seconds: float
+    rag_log_timing: bool
 
     @property
     def tidb_conn_str(self) -> str:
@@ -54,6 +70,8 @@ def load_settings() -> Settings:
         ollama_base_url=os.getenv("OLLAMA_BASE_URL"),
         ollama_embedding_model=os.getenv("OLLAMA_EMBEDDING_MODEL"),
         ollama_chat_model=os.getenv("OLLAMA_CHAT_MODEL"),
+        rag_timeout_seconds=_get_env_float("RAG_TIMEOUT_SECONDS", 50.0),
+        rag_log_timing=_get_env_bool("RAG_LOG_TIMING", True),
     )
 
 settings = load_settings()

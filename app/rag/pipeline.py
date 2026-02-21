@@ -1,3 +1,6 @@
+from time import perf_counter
+from typing import Any, Dict, Tuple
+
 from langchain_core.runnables import RunnableLambda
 
 from app.core.llm import llm, retriever
@@ -48,6 +51,10 @@ def coerce_answer(value):
     return RagAnswer.model_validate(value)
 
 
+def _elapsed_ms(start: float) -> float:
+    return round((perf_counter() - start) * 1000, 2)
+
+
 def resolve_user_profile(inputs: dict) -> str:
     if "user_profile" in inputs:
         return inputs["user_profile"]
@@ -80,10 +87,95 @@ def resolve_search_query(inputs: dict) -> str:
     return build_search_query(product_name, facts)
 
 
-structured_llm = llm.with_structured_output(
-    schema=RagAnswer.model_json_schema(),
-    method="json_schema",
-)
+try:
+    structured_llm = llm.with_structured_output(
+        schema=RagAnswer.model_json_schema(),
+        method="json_schema",
+        include_raw=True,
+    )
+    _structured_with_raw = True
+except TypeError:
+    structured_llm = llm.with_structured_output(
+        schema=RagAnswer.model_json_schema(),
+        method="json_schema",
+    )
+    _structured_with_raw = False
+
+
+def _extract_llm_payload(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+
+    parsed = value.get("parsed")
+    if parsed is not None:
+        return parsed
+
+    raw = value.get("raw")
+    if raw is not None:
+        content = getattr(raw, "content", raw)
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, dict):
+                    text = item.get("text")
+                    if text:
+                        parts.append(str(text))
+                elif item:
+                    parts.append(str(item))
+            return "\n".join(parts).strip()
+        return content
+
+    parsing_error = value.get("parsing_error")
+    if parsing_error is not None:
+        return str(parsing_error)
+    return value
+
+
+def run_rag(inputs: dict) -> Tuple[RagAnswer, Dict[str, float]]:
+    """Run the RAG flow and return answer + step timings in milliseconds."""
+    timings: Dict[str, float] = {}
+    total_start = perf_counter()
+
+    start = perf_counter()
+    search_query = resolve_search_query(inputs)
+    timings["resolve_search_query_ms"] = _elapsed_ms(start)
+
+    start = perf_counter()
+    docs = retriever.invoke(search_query)
+    timings["retrieval_ms"] = _elapsed_ms(start)
+
+    start = perf_counter()
+    context = format_docs(docs)
+    timings["format_context_ms"] = _elapsed_ms(start)
+
+    start = perf_counter()
+    user_query = resolve_user_query(inputs)
+    user_profile = resolve_user_profile(inputs)
+    product_profile = resolve_product_profile(inputs)
+    timings["resolve_inputs_ms"] = _elapsed_ms(start)
+
+    start = perf_counter()
+    prompt_value = PROMPT.invoke(
+        {
+            "context": context,
+            "user_query": user_query,
+            "product_profile": product_profile,
+            "user_profile": user_profile,
+        }
+    )
+    timings["build_prompt_ms"] = _elapsed_ms(start)
+
+    start = perf_counter()
+    llm_output = structured_llm.invoke(prompt_value)
+    if _structured_with_raw:
+        llm_output = _extract_llm_payload(llm_output)
+    timings["llm_ms"] = _elapsed_ms(start)
+
+    start = perf_counter()
+    answer = coerce_answer(llm_output)
+    timings["validate_answer_ms"] = _elapsed_ms(start)
+    timings["total_ms"] = _elapsed_ms(total_start)
+    return answer, timings
 
 rag_chain = (
     {
